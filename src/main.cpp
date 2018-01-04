@@ -116,33 +116,32 @@ int main() {
 
           // Fit polynomial to the points - 3rd order.
           Eigen::VectorXd coeffs = polyfit(ptsx_transformed, ptsy_transformed, 3);
-          double cte = polyeval(coeffs, 0);  // px = 0, py = 0
-          double epsi = -atan(coeffs[1]);  // p
+          //double cte = polyeval(coeffs, 0);  // px = 0, py = 0
+          //double epsi = -atan(coeffs[1]);  // p
 
           steer_value = j[1]["steering_angle"];
           throttle_value = j[1]["throttle"];
 
           Eigen::VectorXd state(6);
 
-
-          // Actuator delay 100 ms
-          const double delay = 0.010; //sec
+          // initial state without latency
+          const double latency = 0.100; // 100 ms
           const double x0 = 0;
           const double y0 = 0;
           const double psi0 = 0;
           const double cte0 = coeffs[0];
           const double epsi0 = -atan(coeffs[1]);
 
-          //?? State after delay.
-          double x_delay = x0 + ( v * cos(psi0) * delay );
-          double y_delay = y0 + ( v * sin(psi0) * delay );
-          double psi_delay = psi0 - ( v * steer_value * delay / Lf );
-          double v_delay = v + throttle_value * delay;
-          double cte_delay = cte0 + ( v * sin(epsi0) * delay );
-          double epsi_delay = epsi0 - ( v * atan(coeffs[1]) * delay / Lf );
+          //Predicted state based on 100ms latency
+          double x1 = x0 + ( v * cos(psi0) * latency );
+          double y1 = y0 + ( v * sin(psi0) * latency );
+          double psi1 = psi0 - ( v * steer_value * latency / Lf );
+          double v1 = v + throttle_value * latency;
+          double cte1 = cte0 + ( v * sin(epsi0) * latency );
+          double epsi1 = epsi0 - ( v * atan(coeffs[1]) * latency / Lf );
 
-          // Define the state vector.
-          state << x_delay, y_delay, psi_delay, v_delay, cte_delay, epsi_delay;
+          // Update the state vector with latency considerated
+          state << x1, y1, psi1, v1, cte1, epsi1;
 
           auto vars = mpc.Solve(state, coeffs);
           steer_value = vars[0]/(deg2rad(25.0));
