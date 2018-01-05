@@ -9,7 +9,7 @@ using CppAD::AD;
 size_t N = 20; //predicting to the next 20 steps, flexible yet accurate.
 double dt = 0.03; //30 ms step to get a more accurate prediction
 
-const double v_ref = 60; //target speed is 60 mph
+const double v_ref = 40; //target speed is 40 mph
 
 size_t x_start = 0;
 size_t y_start = x_start + N;
@@ -27,7 +27,7 @@ public:
     const double epsi_weight = 10; //minimize the orientation errors
     const double v_weight = 1; //try to match to the target velocity
     const double delta_weight = 1; //try to reduce the wheeler control angle
-    const double a_weight = 1; //try to avoid acceleration
+    const double a_weight = 1; //try to avoid too much acceleration/break
     const double smooth_delta_weight = 1e5; //weight to minimize wheeler control changes;
     const double smooth_a_weight = 10; //minimize the acceleration changes
 
@@ -49,8 +49,8 @@ public:
 
         // The part of the cost based on the reference state.
         for( int i = 0; i < N; i++ ) {
-            fg[0] += cte_weight*CppAD::pow(vars[cte_start + i], 2);
-            fg[0] += epsi_weight*CppAD::pow(vars[epsi_start + i], 2);
+            fg[0] += (cte_weight + i*2)*CppAD::pow(vars[cte_start + i], 2);
+            fg[0] += (epsi_weight + i*2)*CppAD::pow(vars[epsi_start + i], 2);
             fg[0] += v_weight*CppAD::pow(vars[v_start + i] - v_ref, 2);
         }
 
@@ -194,8 +194,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // degrees (values in radians).
     // NOTE: Feel free to change this to something else.
     for (int i = delta_start; i < a_start; i++) {
-        vars_lowerbound[i] = deg2rad(-25.0);
-        vars_upperbound[i] = deg2rad(25.0);
+        vars_lowerbound[i] = -max_steer_deg;
+        vars_upperbound[i] = max_steer_deg;
     }
 
     // Acceleration/decceleration upper and lower limits.

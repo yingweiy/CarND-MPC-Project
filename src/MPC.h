@@ -5,16 +5,17 @@
 #include "Eigen-3.3/Eigen/Core"
 
 using namespace std;
-
 const double Lf = 2.67;
-
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
 
 class MPC {
  public:
+    const double max_steer_deg = 25;
+
 
   MPC();
+  //constexpr double pi() { return M_PI; }
+  double deg2rad(double x) { return x * M_PI / 180; }
+  //double rad2deg(double x) { return x * 180 / M_PI; }
 
   virtual ~MPC();
 

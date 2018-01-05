@@ -9,12 +9,9 @@
 #include "MPC.h"
 #include "json.hpp"
 
+
 // for convenience
 using json = nlohmann::json;
-
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -143,7 +140,7 @@ int main() {
           state << x1, y1, psi1, v1, cte1, epsi1;
 
           auto vars = mpc.Solve(state, coeffs);
-          steer_value = vars[0]/(deg2rad(25.0));
+          steer_value = vars[0]/(mpc.deg2rad(mpc.max_steer_deg));
           throttle_value = vars[1];
 
           json msgJson;
