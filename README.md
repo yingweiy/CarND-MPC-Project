@@ -2,6 +2,25 @@
 Self-Driving Car Engineer Nanodegree Program
 
 ---
+# Answer to Rubric Questons
+
+## 1. Model Explanation in Details
+
+* State
+* Actuators
+* Update Equations
+* Cost function
+
+## 2. The Choice of N and dt
+
+## 3. Waypoints Fitting
+
+## 4. Latency Handling 
+
+The 100ms latency is handled by updating the current state with future state in 100ms later.
+
+## 5. Running
+
 
 ## Dependencies
 
