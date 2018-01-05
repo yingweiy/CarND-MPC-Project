@@ -105,7 +105,7 @@ public:
             AD<double> delta0 = vars[delta_start + t - 1];
             AD<double> a0 = vars[a_start + t - 1];
 
-            AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * CppAD::pow(x0, 2) + coeffs[3] * CppAD::pow(x0, 3);
+            AD<double> ref0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * CppAD::pow(x0, 2) + coeffs[3] * CppAD::pow(x0, 3);
             AD<double> psides0 = CppAD::atan(coeffs[1]+ 2 * coeffs[2] * x0 + 3 * coeffs[3] * CppAD::pow(x0, 2));
 
             // Here's `x` to get you started.
@@ -123,7 +123,7 @@ public:
             fg[1 + psi_start + t] = psi1 - (psi0 - v0 * delta0 / Lf * dt);
             fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
             fg[1 + cte_start + t] =
-                    cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+                    cte1 - ((ref0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
             fg[1 + epsi_start + t] =
                     epsi1 - ((psi0 - psides0) - v0 * delta0 / Lf * dt);
         }
@@ -162,8 +162,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // TODO: Set the number of constraints
     size_t n_constraints = N * 6;
 
-    // Initial value of the independent variables.
-    // SHOULD BE 0 besides initial state.  //???
+    // setting Vars vector values
     Dvector vars(n_vars);
     for (int i = 0; i < n_vars; i++) {
         vars[i] = 0;
@@ -195,8 +194,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     // degrees (values in radians).
     // NOTE: Feel free to change this to something else.
     for (int i = delta_start; i < a_start; i++) {
-        vars_lowerbound[i] = -0.436332;
-        vars_upperbound[i] = 0.436332;
+        vars_lowerbound[i] = deg2rad(-25.0);
+        vars_upperbound[i] = deg2rad(25.0);
     }
 
     // Acceleration/decceleration upper and lower limits.

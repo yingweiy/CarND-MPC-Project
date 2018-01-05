@@ -14,8 +14,7 @@ using json = nlohmann::json;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
+
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -92,7 +91,6 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
@@ -124,6 +122,7 @@ int main() {
 
           Eigen::VectorXd state(6);
 
+
           // initial state without latency
           const double latency = 0.100; // 100 ms
           const double x0 = 0;
@@ -135,7 +134,7 @@ int main() {
           //Predicted state based on 100ms latency
           double x1 = x0 + ( v * cos(psi0) * latency );
           double y1 = y0 + ( v * sin(psi0) * latency );
-          double psi1 = psi0 - ( v * steer_value * latency / Lf );
+          double psi1 = psi0 - ( v * steer_value / Lf * latency);
           double v1 = v + throttle_value * latency;
           double cte1 = cte0 + ( v * sin(epsi0) * latency );
           double epsi1 = epsi0 - ( v * atan(coeffs[1]) * latency / Lf );
