@@ -101,24 +101,20 @@ int main() {
           size_t n_waypoints = ptsx.size();
           Eigen::VectorXd ptsx_transformed(n_waypoints);
           Eigen::VectorXd ptsy_transformed(n_waypoints);
-          for (unsigned int i = 0; i < n_waypoints; i++ ) {
-              double dX = ptsx[i] - px;
-              double dY = ptsy[i] - py;
-              double minus_psi = 0.0 - psi;
-              ptsx_transformed( i ) = dX * cos( minus_psi ) - dY * sin( minus_psi );
-              ptsy_transformed( i ) = dX * sin( minus_psi ) + dY * cos( minus_psi );
+          for (int i = 0; i < n_waypoints; i++ ) {
+              double dx = ptsx[i] - px;
+              double dy = ptsy[i] - py;
+              ptsx_transformed( i ) = dx * cos( -psi ) - dy * sin( -psi );  // note the psi is reversed sign
+              ptsy_transformed( i ) = dy * sin( -psi ) + dy * cos( -psi );
           }
 
           // Fit polynomial to the points - 3rd order.
           Eigen::VectorXd coeffs = polyfit(ptsx_transformed, ptsy_transformed, 3);
-          //double cte = polyeval(coeffs, 0);  // px = 0, py = 0
-          //double epsi = -atan(coeffs[1]);  // p
 
           steer_value = j[1]["steering_angle"];
           throttle_value = j[1]["throttle"];
 
           Eigen::VectorXd state(6);
-
 
           // initial state without latency
           const double latency = 0.100; // 100 ms
@@ -136,7 +132,7 @@ int main() {
           double cte1 = cte0 + ( v * sin(epsi0) * latency );
           double epsi1 = epsi0 - ( v * atan(coeffs[1]) * latency / Lf );
 
-          // Update the state vector with latency considerated
+          // Update the state vector with latency considered
           state << x1, y1, psi1, v1, cte1, epsi1;
 
           auto vars = mpc.Solve(state, coeffs);
@@ -150,23 +146,19 @@ int main() {
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
-          vector<double> mpc_x_vals;
-          vector<double> mpc_y_vals;
+          vector<double> mpc_xs;
+          vector<double> mpc_ys;
 
           //2. MPC predicted trajectory here
-
           for (int i = 2; i < vars.size(); i ++) {
-              if (i%2 == 0) {
-                 mpc_x_vals.push_back(vars[i]);
-              }
-              else {
-                 mpc_y_vals.push_back(vars[i]);
-              }
+              if (i%2==0)
+                  mpc_xs.push_back(vars[i]);
+              else
+                  mpc_ys.push_back(vars[i]);
           }
 
-          msgJson["mpc_x"] = mpc_x_vals;
-          msgJson["mpc_y"] = mpc_y_vals;
-
+          msgJson["mpc_x"] = mpc_xs;
+          msgJson["mpc_y"] = mpc_ys;
 
           //Display the waypoints
           vector<double> next_x_vals;
@@ -187,14 +179,6 @@ int main() {
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           // Latency
-          // The purpose is to mimic real driving conditions where
-          // the car does actuate the commands instantly.
-          //
-          // Feel free to play around with this value but should be to drive
-          // around the track with 100ms latency.
-          //
-          // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
-          // SUBMITTING.
           this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
