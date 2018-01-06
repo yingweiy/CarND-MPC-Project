@@ -2,25 +2,135 @@
 Self-Driving Car Engineer Nanodegree Program
 
 ---
-# Answer to Rubric Questons
+# Answer to Rubric Questions
 
-## 1. Model Explanation in Details
+### 1. Model Explanation in Details
 
 * State
-* Actuators
-* Update Equations
-* Cost function
+    - car location: x, y, 
+    - car orientation: psi, 
+    - car velocity: v,
+    - errors to the central point in the path: cte,
+    - errors or car orientations: epsi.
+   
+* actuators
+    - steer_value: the degree of steering,
+    - throttle_value: the acceleration (positive) and break (negative).
+     
+* Update Equations:
+    The equations are updated as follows (MPC.cpp line 121-128): 
+    ```
+    fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
+    fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
+    fg[1 + psi_start + t] = psi1 - (psi0 - v0 * delta0 / Lf * dt);
+    fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
+    fg[1 + cte_start + t] = cte1 - ((ref0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+    fg[1 + epsi_start + t] = epsi1 - ((psi0 - psides0) - v0 * delta0 / Lf * dt);    
+    ```
+    
+* Cost function: The cost function is defined in lines 48-67 in MPC.cpp as follows.
+It utilize factors of cte, epsi, velocity, steering (delta), acceleration (a),
+and the smoothness of the steering and acceleraton. Here a trick for the cte and epsi
+factors, I assigned more weights to the remote points (future points).
 
-## 2. The Choice of N and dt
+```
+fg[0] = 0;
+// The part of the cost based on the reference state.
+for( int i = 0; i < N; i++ ) {
+     fg[0] += (cte_weight + i*2)*CppAD::pow(vars[cte_start + i], 2);
+     fg[0] += (epsi_weight + i*2)*CppAD::pow(vars[epsi_start + i], 2);
+     fg[0] += v_weight*CppAD::pow(vars[v_start + i] - v_ref, 2);
+}
 
-## 3. Waypoints Fitting
+// Minimize the use of actuators.
+for (int i = 0; i< N - 1; i++) {
+    fg[0] += delta_weight*CppAD::pow(vars[delta_start + i], 2);
+    fg[0] += a_weight*CppAD::pow(vars[a_start + i], 2);
+    }
 
-## 4. Latency Handling 
+// Smoothing sequential actuations.
+for (int i = 0; i < N - 2; i++) {
+    fg[0] += smooth_delta_weight*CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+    fg[0] += smooth_a_weight*CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+    }
+```
 
-The 100ms latency is handled by updating the current state with future state in 100ms later.
+Each factors are weighted correspondingly, and the weights are defined in MPC.cpp lines 26-32.
+The weight values and the reason of using such a factor are as follows: 
 
-## 5. Running
+```
+const double cte_weight = 10; //minimize the cte
+const double epsi_weight = 10; //minimize the orientation errors
+const double v_weight = 1; //try to match to the target velocity
+const double delta_weight = 1; //try to reduce the wheeler control angle
+const double a_weight = 1; //try to avoid too much acceleration/break
+const double smooth_delta_weight = 1e5; //weight to minimize wheeler control changes;
+const double smooth_a_weight = 10; //minimize the acceleration changes
+```
 
+
+### 2. The Choice of N and dt
+* The idea to choice N and dt: I tried with various pair of N and dt, and the values 
+that I finally chose are N=20, and dt = 0.03 (or 30 ms).
+
+  - The larger of N, the optimization yeilds a more accurate control, but get 
+less controllability, especially this could be problem for sharp turns. Recall that
+there are two continous sharp turns (left, and then right) very close to each 
+other. In addition, larger N incurs more computation costs. 
+
+  - The dt is the step size of the prediction. The smaller the dt, the higher the 
+  resolution of prediction. Also like N, too high resolution (smaller value of dt)
+  will incur the computational burden.
+
+* History of values tested: 
+  - Besides the final choice of N=20, I also tried N to be large like 100, 50, but it appears hard 
+to take turns.
+  - I tried the dt to be small as 0.01, or larger 0.1. I finally choose dt=0.03 for 
+  better performance.
+
+
+### 3. Waypoints Fitting
+
+The MPC predicted points are then fitted with 3rd order polynomial coefficient and evaluated as follows.
+This is in the main.cpp lines 172-184: 
+
+```
+vector<double> next_x_vals;
+vector<double> next_y_vals;
+
+int n_next_points = 30;
+int step_size =3;
+for (int i = 0; i < n_next_points; i ++){
+    double x = i * step_size;
+    next_x_vals.push_back(x);
+    next_y_vals.push_back(polyeval(coeffs, x));
+    }
+```
+
+### 4. Latency Handling 
+
+The 100ms latency is handled by updating the current state with future state in 100ms later. The latency is first 
+defined in code as (main.cpp, line 124):
+
+```python
+const double latency = 0.100; // 100 ms
+```
+The latency is then applied as "dt", the state with latency is then predicted as used (main.cpp lines 132-137):
+
+```
+//Predicted state based on 100ms latency
+double x1 = x0 + ( v * cos(psi0) * latency );
+double y1 = y0 + ( v * sin(psi0) * latency );
+double psi1 = psi0 - ( v * steer_value / Lf * latency);
+double v1 = v + throttle_value * latency;
+double cte1 = cte0 + ( v * sin(epsi0) * latency );
+double epsi1 = epsi0 - ( v * atan(coeffs[1]) * latency / Lf );
+
+// Update the state vector with latency considerated
+state << x1, y1, psi1, v1, cte1, epsi1;
+
+```
+   
 
 ## Dependencies
 
