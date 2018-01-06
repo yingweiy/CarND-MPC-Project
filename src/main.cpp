@@ -101,11 +101,11 @@ int main() {
           size_t n_waypoints = ptsx.size();
           Eigen::VectorXd ptsx_transformed(n_waypoints);
           Eigen::VectorXd ptsy_transformed(n_waypoints);
-          for (int i = 0; i < n_waypoints; i++ ) {
+          for (unsigned int i = 0; i < n_waypoints; i++ ) {
               double dx = ptsx[i] - px;
               double dy = ptsy[i] - py;
-              ptsx_transformed( i ) = dx * cos( -psi ) - dy * sin( -psi );  // note the psi is reversed sign
-              ptsy_transformed( i ) = dy * sin( -psi ) + dy * cos( -psi );
+              ptsx_transformed( i ) = dx * cos( -psi ) - dy * sin( -psi );
+              ptsy_transformed( i ) = dx * sin( -psi ) + dy * cos( -psi );
           }
 
           // Fit polynomial to the points - 3rd order.
@@ -115,6 +115,7 @@ int main() {
           throttle_value = j[1]["throttle"];
 
           Eigen::VectorXd state(6);
+
 
           // initial state without latency
           const double latency = 0.100; // 100 ms
@@ -132,7 +133,7 @@ int main() {
           double cte1 = cte0 + ( v * sin(epsi0) * latency );
           double epsi1 = epsi0 - ( v * atan(coeffs[1]) * latency / Lf );
 
-          // Update the state vector with latency considered
+          // Update the state vector with latency considerated
           state << x1, y1, psi1, v1, cte1, epsi1;
 
           auto vars = mpc.Solve(state, coeffs);
@@ -150,11 +151,9 @@ int main() {
           vector<double> mpc_ys;
 
           //2. MPC predicted trajectory here
-          for (int i = 2; i < vars.size(); i ++) {
-              if (i%2==0)
-                  mpc_xs.push_back(vars[i]);
-              else
-                  mpc_ys.push_back(vars[i]);
+          for (int i = 2; i < vars.size(); i=i+2) {
+              mpc_xs.push_back(vars[i]);
+              mpc_ys.push_back(vars[i+1]);
           }
 
           msgJson["mpc_x"] = mpc_xs;
